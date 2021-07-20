@@ -1,0 +1,302 @@
+# Name-Rishabh Shrestha
+# Fall 2020 CSCI 444
+# Homework 3
+# Breweries in the US
+
+
+library(tidyverse)
+library(rvest)
+library(robotstxt)
+library(tidytext) 
+
+
+paths_allowed("https://www.ratebeer.com/")
+
+
+page<-read_html("https://www.ratebeer.com/breweries/mississippi/24/213/")
+
+page %>% xml_structure()
+
+name<-page%>%html_nodes("#brewerTable a:nth-child(1)")%>% html_text()
+name
+
+type<-page%>%html_nodes("td.hidden-sm")%>%html_text()
+type
+
+beerCount<-page%>%html_nodes(".hidden-sm+ td")%>%html_text()
+beerCount
+
+established<-page%>%html_nodes("td:nth-child(5)")%>%html_text()
+established
+
+url<-page%>%html_nodes("#brewerTable a:nth-child(1)")%>%html_attr("href")
+url
+url<-paste("https://www.ratebeer.com",url,sep="")
+url
+city_opened<-page%>%html_nodes(".filter")%>%html_text()
+city_opened
+city_opened<-paste(city_opened,"_Opened",sep="")
+city_opened
+
+city_closed<-page%>%html_nodes("#brewerTable span")%>%html_text()
+city_closed<-paste(city_closed,"_Closed",sep="")
+city_closed
+
+city<-c(city_opened,city_closed)
+city
+
+beerCount<-beerCount%>%str_trim()
+beerCount<-as.integer(beerCount)
+beerCount
+
+established<-as.integer(established)
+established
+
+
+msBreweries<-tibble(
+  name=name,
+  city=city,
+  type=type,
+  beerCount=beerCount,
+  established=established,
+  url=url
+)
+glimpse(msBreweries)
+
+msBreweries<-msBreweries%>%separate(city,c("city","status"), sep="_",extra="merge")
+write_csv(msBreweries,"data/msBreweries.csv")
+
+#1. Which type of brewery is the most popular in Mississippi?
+#Microbrewery is the mst popular in Mississippi
+
+msBreweries_1<-msBreweries%>%
+  group_by(type)%>%
+  count()
+msBreweries_1%>%
+  ggplot(mapping=aes(x=type,y=n,fill=type))+
+  geom_bar(mapping=aes(x=reorder(type,n)),stat='identity')+
+  theme(axis.title.x=element_blank(),axis.title.y=element_blank())+
+  labs(title="Mississippi Breweries",fill="Brewery")+
+  coord_flip()
+
+#2. Looking at the years 2005-2020, which type of brewery has the most openings 
+#(i.e., established)? Regardless of type of brewery, which year did the most breweries open?
+#Microbrewery has the most openings.
+#The most breweries was opened in 2013.
+
+msBreweries_2<-msBreweries%>%
+  group_by(type,established)%>%
+  count()
+msBreweries_2%>%
+  ggplot(mapping=aes(x=established,y=n,fill=type))+
+  geom_bar(stat='identity')+
+  labs(title="Mississippi Breweries by Year",x="Year Established",y="Number",fill="Brewery")
+
+
+
+#3.Which type of breweries have not fared so well in Mississippi (i.e., most number that have closed by type)?
+#Brewpub has not fared so well in Mississippi
+
+msBreweries_3<-msBreweries%>%
+  group_by(type,established,status)%>%
+  count()
+
+msBreweries_3%>%
+  ggplot(mapping=aes(x=established,y=n,fill=type))+
+  geom_bar(stat='identity')+
+  facet_wrap(~status)+
+  labs(title="Mississippi Breweries by Year",x="Year Established",y="Number",fill="Brewery")
+
+
+#4. Why is Wyoming 51 and not 50? What is the additional entry’s name and what is its number?
+#This is because we have another state in the middle of the list. Washington DC is in the 48th in the website.
+
+
+#5.
+states<-read_csv("data/states.csv")
+
+states<-states$name
+states[1]
+states[51]<-"Wyoming"
+states[48]<-"Washington DC"
+states[49]<-"West Virginia"
+states[50]<-"Wisconsin"
+states
+states_lower<-str_to_lower(states)
+states_lower<-str_replace(states_lower," ","-")
+states_lower
+#6.
+count<-1
+url_states<-c()
+for(state in states_lower)
+{
+  url_states[count]<-paste("https://www.ratebeer.com/breweries/",state,"/",count,"/213/",sep="")
+  # url_states<-paste(url_states,"/",count,"/213/",sep="")
+  count<-count+1
+}
+url_states[1]
+
+
+
+
+count<-1
+onePage_name1<-c()
+onePagecity1<-c()
+onePagetype1<-c()
+onePagebeerCount1<-c()
+onePageestablished1<-c()
+onePageurl1<-c()
+
+for(oneURL in url_states)
+{
+  onePage<-read_html(oneURL)
+  onePage_name<-onePage%>%html_nodes("#brewerTable a:nth-child(1)")%>% html_text()
+  onePage_name1<-append(onePage_name1,onePage_name)
+  
+  
+  onePagetype<-onePage%>%html_nodes("td.hidden-sm")%>%html_text()
+  onePagetype1<-append(onePagetype1, onePagetype)
+  
+  onePagebeerCount<-onePage%>%html_nodes(".hidden-sm+ td")%>%html_text()
+  onePagebeerCount<-onePagebeerCount%>%str_trim()
+  onePagebeerCount<-as.integer(onePagebeerCount)
+  onePagebeerCount1<-append(onePagebeerCount1, onePagebeerCount)
+  
+  onePageestablished<-onePage%>%html_nodes("td:nth-child(5)")%>%html_text()
+  onePageestablished<-as.integer(onePageestablished)
+  onePageestablished1<-append(onePageestablished1,onePageestablished)
+  
+  onePageurl<-onePage%>%html_nodes("#brewerTable a:nth-child(1)")%>%html_attr("href")
+  onePageurl<-paste("https://www.ratebeer.com",onePageurl,sep="")
+  onePageurl1<-append(onePageurl1,onePageurl)
+  
+  onePagecity_opened<-onePage%>%html_nodes(".filter")%>%html_text()
+  onePagecity_opened
+  onePagecity_opened<-paste(states[count],"_",onePagecity_opened,"_Opened",sep="")
+  onePagecity_opened
+  
+  onePagecity_closed<-onePage%>%html_nodes("#brewerTable span")%>%html_text()
+  onePagecity_closed<-paste(states[count],"_",onePagecity_closed,"_Closed",sep="")
+  onePagecity_closed
+  
+  onePagecity<-c(onePagecity_opened,onePagecity_closed)
+  onePagecity<-onePagecity%>%str_trim()
+  onePagecity1<-append(onePagecity1,onePagecity)
+  
+  count<-count+1
+ 
+}
+
+onePage_name1
+onePage
+usBreweries<-tibble(name=onePage_name1,
+             city=onePagecity1,
+             type=onePagetype1,
+             beerCount=onePagebeerCount1,
+             established=onePeageestablished1,
+             url=onePageurl1)
+
+usBreweries<-usBreweries%>%separate(city,c("state","city","status"), sep="_",extra="merge")
+
+write.csv(usBreweries,"data/usBreweries.csv")
+
+usBreweries<-read_csv("data/usBreweries.csv")
+usBreweries<-usBreweries%>%
+  select(-X1)
+
+#7. Which type of brewery has had the most success? Which type of brewery has been hardest hit by closures?
+#Microbrewery has had the most success and Microbrewery also has been hardest hit by numbers if you count the number of breweries
+#Microbrewery has had the most success and Microbrewery also has been hardest hit by numbers if you count the number of breweries but we have Brewpub after that. 
+#Most of the opened breweries were the type Microbrewery 
+
+usBreweries_7<-usBreweries%>%
+  group_by(type,status)%>%
+  count()
+
+usBreweries_7%>%
+  ggplot(mapping=aes(x=type,y=n, fill=type))+
+  geom_bar(stat='identity')+
+  facet_wrap(~status)+
+  labs(title="US Breweries by Type",x="Brewery Type",y="Number",fill="Brewery")
+
+#8.At what year would you say the number of breweries started to increase in the US (This year should be
+# before 2000)?
+#I would say it started increasing during 1990s
+usBreweries_8<-usBreweries%>%
+  group_by(type,established)%>%
+  count()
+
+usBreweries_8%>%
+  ggplot(mapping=aes(x=established,y=n))+
+  geom_point(mapping=aes(color=type))+
+  geom_line(mapping=aes(color=type))+
+  labs(title="US Establishment of Breweries",x="Year",y="Number",fill="Brewery")
+
+#9. Which type of brewery has had the most success?
+#What is the peak of its growth?
+#Read the following article, why do you think this peak growth has occurred 
+#(not just for this type of brewery, but all breweries)?
+
+#Microbrewery has had the most success. The peak of its growth is around 650 around during 2016
+
+usBreweries_9<-usBreweries_8%>%
+  filter(established>=2000)
+
+usBreweries_9%>%
+  ggplot(mapping=aes(x=established,y=n))+
+  geom_point(mapping=aes(color=type))+
+  geom_line(mapping=aes(color=type))+
+  labs(title="US Establishment of Breweries",x="Year",y="Number",fill="Brewery")
+
+#10. What are these numbers and how do they compare to the brewbound article?
+#Do you think the numbers are close enough?
+#In 2017, 860 breweries were established and 47 were closed.
+#In 2017, 860 breweries were established and 47 were closed. 
+# Considering the numbers reported in the brewbound article for 2017: 997 breweries established and 165 breweries closed, so our data gives a quite similar amoun for established breweries but for the closed breweries, it is widely different. 
+
+usBreweries_10<-usBreweries%>%
+  filter(established==2017)%>%
+  group_by(status)%>%
+  count()
+glimpse(usBreweries_10)
+# Groups: status [2]
+# $ status <chr> "Closed", "Opened"
+# $ n      <int> 47, 860
+
+
+#11. Which type of brewery DOES NOT have California at the top of the list (i.e., the most breweries)? What state is
+#at the top of this list? Why do you think this is the case? What type of brewery is only
+#found in four states – name the four states? What is the definition of this type of
+#brewery? Of the remaining six types of breweries, which states have the least number of
+#breweries (six answers)?
+
+# From the plot, Contract Brewer does not have California at the top of the list. Indiana is at the top of this list for this brewery.
+# Commissioner brewery is only found in the four states- California, Indiana, Wisconsin, Connecticut.
+# Commissioner Brewery could be the type of brewery that selling cheap beer under a new brand name and commissioning the sellers for it. It could be done locally by some local brands.
+# 
+# States with the least number of breweries for each brewery type-
+# Brewpub-Mississippi
+# Brewpub/Brewery-Alabama
+# Client Brewer-Hawaii
+# Commercial Brewery-Lousiana
+# Contact Brewer-Arizona
+# Microbrewery-Washinton DC
+
+
+usBreweries_11<-usBreweries%>%
+  group_by(type,state)%>%
+  count()
+
+
+
+usBreweries_11%>%
+  ggplot(mapping=aes(x=state,y=n,fill=state))+
+  geom_bar(mapping=aes(reorder_within(state,n,type)),stat='identity')+
+  facet_wrap(~type,scales="free")+
+  coord_flip()+
+  scale_x_reordered() +
+  scale_y_continuous(expand = c(0,0)) +
+  theme(axis.title.x=element_blank(),axis.title.y=element_blank())+
+  guides(fill=FALSE)+
+  labs(title="Number of Breweries by State")
+  

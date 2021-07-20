@@ -1,0 +1,172 @@
+#Name-Rishabh Shrestha
+#Fall 2020 Csci 444
+#Homework2
+#Project-Washington DC Bike Rentals Data Visualization
+
+library(tidyverse)
+library(lubridate)
+
+
+bikes<-read_csv("data/bikeshare-day.csv")
+glimpse(bikes)
+
+#1
+bikes<-bikes%>%
+  mutate(season=case_when(season==1~"Winter", season==2~"Spring", season==3~"Summer", season==4~"Fall"))
+
+bikes<-bikes%>%
+  mutate(holiday=case_when(holiday==0~"No", holiday==1~"Yes"))
+
+bikes<-bikes%>%
+  mutate(workingday=case_when(workingday==0~"Weekend", workingday==1~"Weekday"))
+
+bikes<-bikes%>%
+  mutate(yr=case_when(yr==0~2011, yr==1~2012))
+
+bikes<-bikes%>%
+  mutate(weathersit=case_when(weathersit==1~"Clear", weathersit==2~"Mist", weathersit==3~"Light Rain",weathersit==4~"Heavy Rain"))
+
+bikes<-bikes%>%
+  rename("Washington DC Date"="dteday")
+
+glimpse(bikes)
+
+#2
+bikes$Humidity<-bikes$hum*100
+bikes$Windspeed<-bikes$windspeed*67
+bikes$Temperature<-(bikes$temp*41*9/5)+32
+bikes$Adjustedtemp<-(bikes$atemp*50*9/5)+32
+
+bikes<-bikes%>%
+  rename("Adjusted Temperature"="Adjustedtemp")
+
+#3  
+bikes$diff<-bikes$cnt-(bikes$registered+bikes$nonregistered)
+
+
+all(bikes$diff == 0)
+
+bikes<-bikes%>%
+  rename("Bike Rentals"="cnt")
+glimpse(bikes)
+
+
+#4
+
+bikes$`Washington DC Date`<-as.Date(bikes$`Washington DC Date`,"%m/%d/%Y")
+glimpse(bikes)
+
+bikes%>%
+  ggplot(mapping=aes(x=`Washington DC Date`,y=`Bike Rentals`,color=Temperature))+
+  geom_point()
+
+bikes%>%
+  ggplot(mapping=aes(x=`Washington DC Date`,y=`Bike Rentals`,color=`Adjusted Temperature`))+
+  geom_point()
+
+bikes%>%
+  ggplot(mapping=aes(x=`Washington DC Date`,y=`Bike Rentals`,color=Humidity))+
+  geom_point()
+
+bikes%>%
+  ggplot(mapping=aes(x=`Washington DC Date`,y=`Bike Rentals`,color=Windspeed))+
+  geom_point()
+
+#5
+bikes_new<-bikes%>%
+  select(`Washington DC Date`,`Bike Rentals`,Temperature,`Adjusted Temperature`,Humidity,Windspeed)
+
+bikes_new<-bikes_new%>%
+  pivot_longer(Temperature:Windspeed,names_to="Weather Conditions",values_to="Measurements")
+
+bikes_new%>%
+  ggplot(mapping=aes(x=`Washington DC Date`,y=`Bike Rentals`,color=Measurements))+
+  geom_point()+
+  facet_wrap(~`Weather Conditions`)
+
+
+
+
+ 
+
+#6
+bikes_2011<-bikes%>%filter(`Washington DC Date`> "2011-01-01" & `Washington DC Date`< "2011-12-31")
+  
+bikes_2011%>%
+  ggplot(mapping=aes(x=`Washington DC Date`,y=`Bike Rentals`,color=Temperature))+
+  geom_point()
+
+bikes_2011%>%
+  ggplot(mapping=aes(x=Temperature, y=`Bike Rentals`, color=Temperature))+
+  geom_point()
+
+bikes_2012<-bikes%>%filter(`Washington DC Date`> "2012-01-01" & `Washington DC Date`< "2012-12-31")
+bikes_2012%>%
+  ggplot(mapping=aes(x=`Washington DC Date`,y=`Bike Rentals`,color=Temperature))+
+  geom_point()
+
+bikes_2012%>%
+  ggplot(mapping=aes(x=Temperature, y=`Bike Rentals`, color=Temperature))+
+  geom_point()
+
+
+#7
+bikes_2011_meanbymonth<-bikes_2011%>%
+  mutate(month = format(`Washington DC Date`, "%m"))%>%
+  group_by(month)%>%
+  summarise(meanTemp=mean(Temperature),r=cor(`Bike Rentals`,Temperature))
+
+bikes_2011_cor<-bikes_2011%>%
+  summarise(r=cor(`Bike Rentals`,Temperature))
+
+
+
+bikes_2012_meanbymonth<-bikes_2012%>%
+  mutate(month = format(`Washington DC Date`, "%m"))%>%
+  group_by(month)%>%
+  summarise(meanTemp=mean(Temperature),r=cor(`Bike Rentals`,Temperature))
+
+bikes_2012_cor<-bikes_2012%>%
+  summarise(r=cor(`Bike Rentals`,Temperature))
+
+  
+
+#8a
+bikes_long1<-bikes%>%
+  mutate(workingday=as.factor(workingday))
+
+bikes_long1%>%
+  ggplot(mapping=aes(x=workingday,y=`Bike Rentals`,fill=workingday))+
+  geom_col()
+
+#8b
+bikes%>%
+  ggplot(mapping=aes(x=season,y=`Bike Rentals`,fill=season))+
+  geom_col()
+
+
+#8c
+bikes_long3<-bikes%>%
+  pivot_longer(nonregistered:registered,names_to="membership",values_to="count")
+  
+bikes_long3<-bikes_long3%>%
+  mutate(month = format(`Washington DC Date`, "%m"))
+
+bikes_long3<-bikes_long3%>%
+  group_by(month,membership)%>%
+  summarize(totalcount=sum(count))
+ 
+
+bikes_long3%>%
+  ggplot(mapping=aes(x=membership,y=totalcount,fill=membership))+
+  geom_col()+
+  facet_wrap(~month)
+
+
+
+
+  
+  
+  
+
+
