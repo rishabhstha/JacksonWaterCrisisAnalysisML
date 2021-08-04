@@ -20,6 +20,44 @@ news_data<-news_data%>%
     Media %in% non_MS ~ "non-MS"
     
   ))
+
+news_data<-news_data%>%
+  mutate(Week=case_when(
+    New_Date=="2021-02-08"~0,
+    New_Date=="2021-02-15"~1,
+    New_Date=="2021-02-22"~2,
+    New_Date=="2021-03-01"~3,
+    New_Date=="2021-03-08"~4,
+    New_Date=="2021-03-15"~5,
+    New_Date=="2021-03-22"~6,
+    New_Date=="2021-03-29"~7,
+    New_Date=="2021-04-05"~8,
+    New_Date=="2021-04-12"~9,
+    New_Date=="2021-04-19"~10,
+    New_Date=="2021-04-26"~11,
+    New_Date=="2021-05-03"~12
+    
+  ))
+
+# news_data<-news_data%>%
+#   mutate(Week=case_when(
+#     New_Date=="2021-02-08"~"Week0",
+#     New_Date=="2021-02-15"~"Week1",
+#     New_Date=="2021-02-22"~"Week2",
+#     New_Date=="2021-03-01"~"Week3",
+#     New_Date=="2021-03-08"~"Week4",
+#     New_Date=="2021-03-15"~"Week5",
+#     New_Date=="2021-03-22"~"Week6",
+#     New_Date=="2021-03-29"~"Week7",
+#     New_Date=="2021-04-05"~"Week8",
+#     New_Date=="2021-04-12"~"Week9",
+#     New_Date=="2021-04-19"~"Week10",
+#     New_Date=="2021-04-26"~"Week11",
+#     New_Date=="2021-05-03"~"Week12"
+#       
+#   ))
+
+#Bar graph faceted with Media
 # news_data%>%
 #   ggplot(mapping=aes(x=Media,y=Title,fill=Media))+
 #   geom_col()+
@@ -28,10 +66,17 @@ news_data<-news_data%>%
 #   
   # +theme(legend.position = "none")  
 
-news_data%>%
-  ggplot(aes(x=New_Date, y=Title, group=Media, color=Media))+
+
+#Line graph for top 10 Media source of JWC
+
+news_data_mediaType<-news_data%>%
+  group_by(Media_Type,Week)%>%
+  summarise(count=sum(Title))
+
+news_data_mediaType%>%
+  ggplot(aes(x=Week, y=count, group=Media_Type, color=Media_Type))+
   geom_line()+
-  geom_point()
+  labs(title="Line graph of articles counts of Top 10 news media source by Media type")
 
 str(news_data)
 
